@@ -12,12 +12,22 @@
 set -u
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-PKG="$HERE/dist/guard-set"
+# This script travels. In the source tree the built package sits under dist/;
+# in the shipped package $HERE *is* the package root. Assuming one layout means
+# the customer's documented self-test fails on a cold clone — which is what
+# shipped on 2026-09-08. Resolve both, and say which one we are in.
+if [ -d "$HERE/dist/guard-set" ]; then
+  PKG="$HERE/dist/guard-set"          # source tree, after ./package.sh
+elif [ -d "$HERE/claimcheck" ] && [ -f "$HERE/install.sh" ]; then
+  PKG="$HERE"                          # installed/cloned package root
+else
+  echo "test_install.sh: no package to test — run ./package.sh first (source tree),"
+  echo "                or run this from inside an unpacked guard-set."
+  exit 1
+fi
 WORK="${TMPDIR:-/tmp}/guardset-install-tests.$$"
 PASS=0
 FAILED=""
-
-[ -d "$PKG" ] || { echo "test_install.sh: run ./package.sh first (no dist/guard-set)"; exit 1; }
 
 ok()   { PASS=$((PASS+1)); printf 'PASS  %s\n' "$1"; }
 bad()  { FAILED="$FAILED
